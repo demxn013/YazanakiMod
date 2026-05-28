@@ -1,46 +1,147 @@
+// ============================================================
+// Yazanaki Mod — Multi-Version Build
+//
+// Build for a specific MC version:
+//   gradlew build              → default (1.21.4, set in gradle.properties)
+//   gradlew build -Pmc=1.21.5
+//   gradlew build -Pmc=1.21.6
+//   gradlew build -Pmc=1.21.8
+//   gradlew build -Pmc=1.21.9
+//   gradlew build -Pmc=1.21.11
+//   gradlew build -Pmc=26.1
+//
+// loom_version in gradle.properties is used by the plugins block.
+// When building a non-default version, Gradle may need to be re-run
+// after changing loom_version if the loom plugin itself changes.
+// For simplicity all supported versions use loom 1.7+ which is compatible.
+// ============================================================
+
 plugins {
-	id 'fabric-loom' version '1.7-SNAPSHOT'
-	id 'maven-publish'
+    // loom_version comes from gradle.properties — must stay there
+    id 'fabric-loom' version "${loom_version}"
+    id 'maven-publish'
 }
 
-version = project.mod_version
+// ── Version table ────────────────────────────────────────────
+// All version-specific values except loom_version live here.
+// loom_version stays in gradle.properties because it must be
+// resolved before project evaluation (plugins block).
+def versionTable = [
+    '1.21.4' : [
+        minecraft_version   : '1.21.4',
+        yarn_mappings       : '1.21.4+build.8',
+        loader_version      : '0.16.9',
+        fabric_version      : '0.110.0+1.21.4',
+        use_mojang_mappings : false,
+        java_ver            : 21,
+    ],
+    '1.21.5' : [
+        minecraft_version   : '1.21.5',
+        yarn_mappings       : '1.21.5+build.1',
+        loader_version      : '0.16.10',
+        fabric_version      : '0.119.2+1.21.5',
+        use_mojang_mappings : false,
+        java_ver            : 21,
+    ],
+    '1.21.6' : [
+        minecraft_version   : '1.21.6',
+        yarn_mappings       : '1.21.6+build.1',
+        loader_version      : '0.16.14',
+        fabric_version      : '0.128.0+1.21.6',
+        use_mojang_mappings : false,
+        java_ver            : 21,
+    ],
+    '1.21.8' : [
+        minecraft_version   : '1.21.8',
+        yarn_mappings       : '1.21.8+build.1',
+        loader_version      : '0.16.14',
+        fabric_version      : '0.130.0+1.21.8',
+        use_mojang_mappings : false,
+        java_ver            : 21,
+    ],
+    '1.21.9' : [
+        minecraft_version   : '1.21.9',
+        yarn_mappings       : '1.21.9+build.4',
+        loader_version      : '0.16.14',
+        fabric_version      : '0.131.0+1.21.9',
+        use_mojang_mappings : false,
+        java_ver            : 21,
+    ],
+    '1.21.11': [
+        minecraft_version   : '1.21.11',
+        yarn_mappings       : '1.21.11+build.1',
+        loader_version      : '0.16.14',
+        fabric_version      : '0.135.0+1.21.11',
+        use_mojang_mappings : false,
+        java_ver            : 21,
+    ],
+    '26.1'   : [
+        minecraft_version   : '26.1.2',
+        yarn_mappings       : null,
+        loader_version      : '0.18.0',
+        fabric_version      : '0.140.0+26.1',
+        use_mojang_mappings : true,
+        java_ver            : 25,
+    ],
+]
+
+def targetMc = project.findProperty('mc') ?: '1.21.4'
+def cfg = versionTable[targetMc]
+if (cfg == null) {
+    throw new IllegalArgumentException(
+        "Unknown -Pmc='${targetMc}'. Valid options: ${versionTable.keySet().sort().join(', ')}"
+    )
+}
+
+// ── Project metadata ─────────────────────────────────────────
+version = "${project.mod_version}+mc${cfg.minecraft_version}"
 group = project.maven_group
 
 base {
-	archivesName = project.archives_base_name
+    archivesName = project.archives_base_name
 }
 
 repositories {
-	// Add repos here if needed
+    // Add repos here if needed
 }
 
+// ── Dependencies ──────────────────────────────────────────────
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    minecraft "com.mojang:minecraft:${cfg.minecraft_version}"
+
+    if (cfg.use_mojang_mappings) {
+        mappings loom.officialMojangMappings()
+    } else {
+        mappings "net.fabricmc:yarn:${cfg.yarn_mappings}:v2"
+    }
+
+    modImplementation "net.fabricmc:fabric-loader:${cfg.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.fabric_version}"
 }
 
+// ── Resource processing ───────────────────────────────────────
 processResources {
-	inputs.property "version", project.version
+    inputs.property "version", project.version
 
-	filesMatching("fabric.mod.json") {
-		expand "version": project.version
-	}
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
 }
 
+// ── Java compilation ──────────────────────────────────────────
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+    it.options.release = cfg.java_ver
 }
 
 java {
-	withSourcesJar()
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.toVersion(cfg.java_ver)
+    targetCompatibility = JavaVersion.toVersion(cfg.java_ver)
 }
 
+// ── Jar ───────────────────────────────────────────────────────
 jar {
-	from("LICENSE") {
-		rename { "${it}_${project.base.archivesName.get()}" }
-	}
+    from("LICENSE") {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
 }
