@@ -3,7 +3,6 @@ package com.yazanaki.mod;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.yazanaki.mod.config.YazanakiConfig;
 import com.yazanaki.mod.data.MemberRegistry;
-import com.yazanaki.mod.features.NametagRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -16,10 +15,9 @@ import net.minecraft.util.Formatting;
  * Startup order:
  * 1. Load config (yazanaki.json in .minecraft/config/)
  * 2. Start member registry background fetch
- * 3. Register nametag renderer
- * 4. Register /yazanaki client command
+ * 3. Register /yazanaki client command
  *
- * Glow and ally protection are handled via mixins — no explicit registration needed.
+ * Glow, ally protection, and nametag rendering are all handled via mixins.
  */
 public class YazanakiMod implements ClientModInitializer {
 
@@ -33,10 +31,7 @@ public class YazanakiMod implements ClientModInitializer {
         // 2. Start background member fetching
         MemberRegistry.init();
 
-        // 3. Register nametag renderer
-        NametagRenderer.register();
-
-        // 4. Register client-side commands
+        // 3. Register client-side commands
         registerCommands();
 
         System.out.println("[Yazanaki] Mod initialized.");
