@@ -36,10 +36,14 @@ public class NametagRenderer {
         // Don't render nametags in F1 mode
         if (client.options.hudHidden) return;
 
-        Camera camera = ctx.camera();
+        // matrixStack can be null if the context doesn't provide one
         MatrixStack matrices = ctx.matrixStack();
-        VertexConsumerProvider.Immediate immediate =
-                client.getBufferBuilders().getEntityVertexConsumers();
+        if (matrices == null) return;
+
+        Camera camera = ctx.camera();
+
+        // Use a dedicated Immediate so we don't interfere with the entity render pipeline
+        VertexConsumerProvider.Immediate immediate = client.getBufferBuilders().getEntityVertexConsumers();
 
         Vec3d camPos = camera.getPos();
 
@@ -64,11 +68,12 @@ public class NametagRenderer {
             renderClanTag(matrices, immediate, camera, data, x, y, z, client.textRenderer);
         }
 
+        // Draw all queued clan tag text in one flush
         immediate.draw();
     }
 
     private static void renderClanTag(MatrixStack matrices,
-                                      VertexConsumerProvider immediate,
+                                      VertexConsumerProvider.Immediate immediate,
                                       Camera camera,
                                       MemberData data,
                                       double x, double y, double z,
@@ -77,7 +82,8 @@ public class NametagRenderer {
         Formatting color = ClanColors.getColor(data.clanAbbr);
 
         // e.g. "[ONF] Soldier"
-        String line = ClanColors.getTag(data.clanAbbr) + " " + (data.rank != null ? data.rank : "");
+        String rankStr = (data.rank != null && !data.rank.isBlank()) ? data.rank : "Member";
+        String line = ClanColors.getTag(data.clanAbbr) + " " + rankStr;
         Text text = Text.literal(line).formatted(color);
 
         matrices.push();
@@ -95,16 +101,10 @@ public class NametagRenderer {
         int textWidth = textRenderer.getWidth(text);
         float xOffset = -textWidth / 2.0f;
 
-        // Background shadow (semi-transparent black rectangle behind text)
-        int bgColor = 0x40000000; // 25% opacity black
-        VertexConsumer bgConsumer = immediate.getBuffer(RenderLayer.getGuiOverlay());
+        // Semi-transparent black background behind text (matches vanilla nametag style)
+        int bgColor = 0x40000000;
 
-        // Draw background quad
-        int padding = 1;
-        // (Skipping quad draw here — vanilla nametag background is handled per-renderer)
-
-        // Draw text — seeThrough=true so it shows through blocks like vanilla nametags when nearby
-        boolean seeThrough = false;
+        // Draw text — NORMAL layer so it doesn't show through walls
         textRenderer.draw(
                 text,
                 xOffset,
@@ -113,7 +113,7 @@ public class NametagRenderer {
                 false,
                 matrix,
                 immediate,
-                seeThrough ? TextRenderer.TextLayerType.SEE_THROUGH : TextRenderer.TextLayerType.NORMAL,
+                TextRenderer.TextLayerType.NORMAL,
                 bgColor,
                 LightmapTextureManager.MAX_LIGHT_COORDINATE
         );

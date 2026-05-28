@@ -20,7 +20,7 @@ import net.minecraft.scoreboard.Team;
 public class GlowManager {
 
     /**
-     * Called during entity rendering for every player in range.
+     * Called during entity rendering for every empire member in range.
      * Ensures the player is in the correct clan team so the glow renders
      * in the right color.
      */
@@ -41,6 +41,12 @@ public class GlowManager {
 
         String teamName = ClanColors.getTeamName(data.clanAbbr);
 
+        // Only reassign if not already in the correct team — avoids scoreboard churn
+        Team currentTeam = scoreboard.getPlayerTeam(username);
+        if (currentTeam != null && currentTeam.getName().equals(teamName)) {
+            return; // Already correct, nothing to do
+        }
+
         // Create the clan team if it doesn't exist yet
         Team team = scoreboard.getTeam(teamName);
         if (team == null) {
@@ -50,15 +56,12 @@ public class GlowManager {
             team.setShowFriendlyInvisibles(false);
         }
 
-        // Only reassign if they're not already in the right team
-        Team currentTeam = scoreboard.getPlayerTeam(username);
-        if (currentTeam == null || !currentTeam.getName().equals(teamName)) {
-            // Remove from old team first if in a different yazanaki team
-            if (currentTeam != null && currentTeam.getName().startsWith("yz_")) {
-                scoreboard.removePlayerFromTeam(username, currentTeam);
-            }
-            scoreboard.addPlayerToTeam(username, team);
+        // Remove from old yazanaki team first if applicable
+        if (currentTeam != null && currentTeam.getName().startsWith("yz_")) {
+            scoreboard.removePlayerFromTeam(username, currentTeam);
         }
+
+        scoreboard.addPlayerToTeam(username, team);
     }
 
     private static void removeFromYazanakiTeam(Scoreboard scoreboard, String username) {
