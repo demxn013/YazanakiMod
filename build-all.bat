@@ -47,9 +47,9 @@ echo  Building Minecraft %MC%
 echo ============================================================
 
 REM Pick the right loom version for this MC version
-if "%MC%"=="1.21.4" set LOOM=1.7-SNAPSHOT
-if "%MC%"=="1.21.5" set LOOM=1.10-SNAPSHOT
-if "%MC%"=="1.21.6" set LOOM=1.10-SNAPSHOT
+if "%MC%"=="1.21.4" set LOOM=1.11-SNAPSHOT
+if "%MC%"=="1.21.5" set LOOM=1.11-SNAPSHOT
+if "%MC%"=="1.21.6" set LOOM=1.11-SNAPSHOT
 if "%MC%"=="1.21.8" set LOOM=1.11-SNAPSHOT
 if "%MC%"=="1.21.9" set LOOM=1.11-SNAPSHOT
 if "%MC%"=="1.21.11" set LOOM=1.14-SNAPSHOT

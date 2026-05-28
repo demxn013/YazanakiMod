@@ -34,7 +34,6 @@ public class GlowManager {
         Scoreboard scoreboard = client.world.getScoreboard();
 
         if (data == null) {
-            // Not a member — remove from any yazanaki team if they're in one
             removeFromYazanakiTeam(scoreboard, username);
             return;
         }
@@ -42,9 +41,9 @@ public class GlowManager {
         String teamName = ClanColors.getTeamName(data.clanAbbr);
 
         // Only reassign if not already in the correct team — avoids scoreboard churn
-        Team currentTeam = scoreboard.getPlayerTeam(username);
+        Team currentTeam = scoreboard.getScoreHolderTeam(username);
         if (currentTeam != null && currentTeam.getName().equals(teamName)) {
-            return; // Already correct, nothing to do
+            return;
         }
 
         // Create the clan team if it doesn't exist yet
@@ -52,22 +51,21 @@ public class GlowManager {
         if (team == null) {
             team = scoreboard.addTeam(teamName);
             team.setColor(ClanColors.getColor(data.clanAbbr));
-            // Don't show friendly invisibles — cleaner visually
             team.setShowFriendlyInvisibles(false);
         }
 
         // Remove from old yazanaki team first if applicable
         if (currentTeam != null && currentTeam.getName().startsWith("yz_")) {
-            scoreboard.removePlayerFromTeam(username, currentTeam);
+            scoreboard.removeScoreHolderFromTeam(username, currentTeam);
         }
 
-        scoreboard.addPlayerToTeam(username, team);
+        scoreboard.addScoreHolderToTeam(username, team);
     }
 
     private static void removeFromYazanakiTeam(Scoreboard scoreboard, String username) {
-        Team currentTeam = scoreboard.getPlayerTeam(username);
+        Team currentTeam = scoreboard.getScoreHolderTeam(username);
         if (currentTeam != null && currentTeam.getName().startsWith("yz_")) {
-            scoreboard.removePlayerFromTeam(username, currentTeam);
+            scoreboard.removeScoreHolderFromTeam(username, currentTeam);
         }
     }
 }
