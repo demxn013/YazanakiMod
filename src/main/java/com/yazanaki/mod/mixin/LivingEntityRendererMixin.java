@@ -12,16 +12,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Shared mixin for 1.21.4 through 1.21.9.
- * Injects into hasOutline (yarn name for these versions).
- *
- * 1.21.11 renames this to shouldRenderOutline — handled in the v1_21_11 source set.
- * 26.1    uses Mojang mappings (shouldShowName) — handled in the v26_1 source set.
+ * Injects into shouldRenderOutline (yarn name in 1.21.11).
  */
 @Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
 
-    @Inject(method = "hasOutline", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "shouldRenderOutline", at = @At("RETURN"), cancellable = true)
     private void yazanaki_hasOutline(LivingEntity entity, CallbackInfoReturnable<Boolean> cir) {
         if (!(entity instanceof AbstractClientPlayerEntity player)) return;
         if (!YazanakiConfig.get().glowEnabled) return;

@@ -1,88 +1,14 @@
 // ============================================================
-// Yazanaki Mod — Multi-Version Build
+// Yazanaki Mod — 1.21.11 Build
 // ============================================================
 
 plugins {
-    // Version is resolved from gradle.properties via settings.gradle resolutionStrategy
-    id 'net.fabricmc.fabric-loom'
+    id 'net.fabricmc.fabric-loom' version '1.15.1'
     id 'maven-publish'
 }
 
-// ── Version selection ─────────────────────────────────────────────────────────
-def targetMc = project.findProperty('mc') ?: '1.21.4'
-
-def unobfuscatedVersions = ['26.1']
-def isUnobfuscated = unobfuscatedVersions.contains(targetMc)
-
-def versionSourceSets = ['1.21.11', '26.1']
-def hasVersionSrc = versionSourceSets.contains(targetMc)
-
-def versionSrcName = 'v' + targetMc.replace('.', '_')
-def versionMixinConfig = hasVersionSrc ? "yazanaki.${versionSrcName}.mixins.json" : null
-
-def overriddenMixins = ['LivingEntityRendererMixin', 'PlayerEntityMixin']
-
-def versionTable = [
-    '1.21.4' : [
-        minecraft_version : '1.21.4',
-        yarn_mappings     : '1.21.4+build.8',
-        loader_version    : '0.16.9',
-        fabric_version    : '0.110.0+1.21.4',
-        java_ver          : 21,
-    ],
-    '1.21.5' : [
-        minecraft_version : '1.21.5',
-        yarn_mappings     : '1.21.5+build.1',
-        loader_version    : '0.16.10',
-        fabric_version    : '0.119.2+1.21.5',
-        java_ver          : 21,
-    ],
-    '1.21.6' : [
-        minecraft_version : '1.21.6',
-        yarn_mappings     : '1.21.6+build.1',
-        loader_version    : '0.16.14',
-        fabric_version    : '0.128.0+1.21.6',
-        java_ver          : 21,
-    ],
-    '1.21.8' : [
-        minecraft_version : '1.21.8',
-        yarn_mappings     : '1.21.8+build.1',
-        loader_version    : '0.16.14',
-        fabric_version    : '0.130.0+1.21.8',
-        java_ver          : 21,
-    ],
-    '1.21.9' : [
-        minecraft_version : '1.21.9',
-        yarn_mappings     : '1.21.9+build.1',
-        loader_version    : '0.16.14',
-        fabric_version    : '0.134.1+1.21.9',
-        java_ver          : 21,
-    ],
-    '1.21.11': [
-        minecraft_version : '1.21.11',
-        yarn_mappings     : '1.21.11+build.1',
-        loader_version    : '0.16.14',
-        fabric_version    : '0.140.2+1.21.11',
-        java_ver          : 21,
-    ],
-    '26.1'   : [
-        minecraft_version : '26.1.2',
-        yarn_mappings     : null,
-        loader_version    : '0.18.4',
-        fabric_version    : '0.140.2+26.1',
-        java_ver          : 21,
-    ],
-]
-
-def cfg = versionTable[targetMc]
-if (cfg == null) {
-    throw new IllegalArgumentException(
-        "Unknown -Pmc='${targetMc}'. Valid options: ${versionTable.keySet().sort().join(', ')}"
-    )
-}
-
-version = "${project.mod_version}+mc${cfg.minecraft_version}"
-group = project.maven_group
+version = "${project.mod_version}+mc1.21.11"
+group   = project.maven_group
 
 base {
     archivesName = project.archives_base_name
@@ -91,118 +17,39 @@ base {
 repositories {
     maven {
         name = 'Fabric'
-        url = 'https://maven.fabricmc.net/'
+        url  = 'https://maven.fabricmc.net/'
     }
     mavenCentral()
 }
 
-// ── Source sets ───────────────────────────────────────────────────────────────
-sourceSets {
-    main {
-        java {
-            if (hasVersionSrc) {
-                // Exclude the mixins that are overridden by the version-specific source set
-                exclude overriddenMixins.collect { "com/yazanaki/mod/mixin/${it}.java" }
-            }
-        }
-    }
-}
-
-if (hasVersionSrc) {
-    sourceSets {
-        "${versionSrcName}" {
-            java {
-                srcDirs = ["src/${versionSrcName}/java"]
-            }
-            resources {
-                srcDirs = ["src/${versionSrcName}/resources"]
-            }
-            // Wire the full compile classpath including Loom's remapped Minecraft jars
-            compileClasspath += sourceSets.main.compileClasspath + configurations.minecraft
-            runtimeClasspath += sourceSets.main.runtimeClasspath
-        }
-    }
-}
-
-// ── Dependencies ──────────────────────────────────────────────────────────────
 dependencies {
-    minecraft "com.mojang:minecraft:${cfg.minecraft_version}"
+    minecraft "com.mojang:minecraft:1.21.11"
+    mappings "net.fabricmc:yarn:1.21.11+build.1:v2"
 
-    if (!isUnobfuscated) {
-        mappings "net.fabricmc:yarn:${cfg.yarn_mappings}:v2"
-    } else {
-        mappings loom.officialMojangMappings()
-    }
-
-    modImplementation "net.fabricmc:fabric-loader:${cfg.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.fabric_version}"
-
-    // Make version-specific source set output available at compile time in main
-    // (not needed for runtime — it's merged into the jar)
-    if (hasVersionSrc) {
-        implementation sourceSets."${versionSrcName}".output
-    }
+    modImplementation "net.fabricmc:fabric-loader:0.16.14"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.140.2+1.21.11"
 }
 
-// ── Resource processing ───────────────────────────────────────────────────────
 processResources {
     inputs.property "version", project.version
-    inputs.property "hasVersionSrc", hasVersionSrc.toString()
 
     filesMatching("fabric.mod.json") {
         expand "version": project.version
     }
-
-    if (hasVersionSrc) {
-        from(sourceSets."${versionSrcName}".resources)
-    }
-
-    doLast {
-        def buildDir = layout.buildDirectory.get().asFile
-
-        def fabricJson = new File("${buildDir}/resources/main/fabric.mod.json")
-        if (fabricJson.exists()) {
-            def text = fabricJson.text
-            if (versionMixinConfig) {
-                text = text.replace(
-                    '"yazanaki.mixins.json"',
-                    '"yazanaki.mixins.json",\n    "' + versionMixinConfig + '"'
-                )
-            }
-            fabricJson.text = text
-        }
-
-        def mixinJson = new File("${buildDir}/resources/main/yazanaki.mixins.json")
-        if (mixinJson.exists() && hasVersionSrc) {
-            // Remove overridden mixin entries from the client array using plain string ops.
-            // The mixin JSON structure is static so a JSON library isn't needed.
-            def text = mixinJson.text
-            overriddenMixins.each { name ->
-                text = text.replaceAll(/,?\s*"${java.util.regex.Pattern.quote(name)}"/, '')
-            }
-            mixinJson.text = text
-        }
-    }
 }
 
-// ── Compile options ───────────────────────────────────────────────────────────
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = cfg.java_ver
+    it.options.release = 21
 }
 
 java {
     withSourcesJar()
-    sourceCompatibility = JavaVersion.toVersion(cfg.java_ver)
-    targetCompatibility = JavaVersion.toVersion(cfg.java_ver)
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
-// ── Jar assembly ──────────────────────────────────────────────────────────────
 jar {
     from("LICENSE") {
         rename { "${it}_${project.base.archivesName.get()}" }
-    }
-
-    if (hasVersionSrc) {
-        from sourceSets."${versionSrcName}".output
     }
 }
