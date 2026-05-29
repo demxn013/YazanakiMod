@@ -2,8 +2,22 @@
 // Yazanaki Mod — Multi-Version Build
 // ============================================================
 
+buildscript {
+    repositories {
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "net.fabricmc:fabric-loom:${project.findProperty('loom_version') ?: '1.8.4'}"
+    }
+}
+
 plugins {
-    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'fabric-loom' version "${loom_version}"
     id 'maven-publish'
 }
 
@@ -12,12 +26,13 @@ def targetMc = project.findProperty('mc') ?: '1.21.4'
 def unobfuscatedVersions = ['26.1']
 def isUnobfuscated = unobfuscatedVersions.contains(targetMc)
 
-// Versions that need their own source set due to renamed/different methods
 def versionSourceSets = ['1.21.11', '26.1']
 def hasVersionSrc = versionSourceSets.contains(targetMc)
 
 def versionSrcName = 'v' + targetMc.replace('.', '_')
 def versionMixinConfig = hasVersionSrc ? "yazanaki.${versionSrcName}.mixins.json" : null
+
+def overriddenMixins = ['LivingEntityRendererMixin', 'PlayerEntityMixin']
 
 def versionTable = [
     '1.21.4' : [
@@ -94,6 +109,16 @@ repositories {
 }
 
 // ── Source sets ──────────────────────────────────────────────────────────────
+sourceSets {
+    main {
+        java {
+            if (hasVersionSrc) {
+                exclude overriddenMixins.collect { "com/yazanaki/mod/mixin/${it}.java" }
+            }
+        }
+    }
+}
+
 if (hasVersionSrc) {
     sourceSets {
         "${versionSrcName}" {
@@ -150,12 +175,15 @@ processResources {
         }
 
         def mixinJson = new File("${buildDir}/resources/main/yazanaki.mixins.json")
-        if (mixinJson.exists()) {
-            def text = mixinJson.text
-            if (hasVersionSrc) {
-                text = text.replace(',\n    "LivingEntityRendererMixin",\n    "PlayerEntityMixin"', '')
+        if (mixinJson.exists() && hasVersionSrc) {
+            def slurper = new groovy.json.JsonSlurper()
+            def mixin = slurper.parseText(mixinJson.text)
+            mixin.client = (mixin.client as List).findAll { entry ->
+                !overriddenMixins.contains(entry)
             }
-            mixinJson.text = text
+            mixinJson.text = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(mixin)
+            )
         }
     }
 }
@@ -170,7 +198,6 @@ java {
     targetCompatibility = JavaVersion.toVersion(cfg.java_ver)
 }
 
-// ── Jar assembly ──────────────────────────────────────────────────────────────
 jar {
     from("LICENSE") {
         rename { "${it}_${project.base.archivesName.get()}" }
