@@ -1,4 +1,8 @@
 pluginManagement {
+    // loomVer can be passed via -PloomVer=x.x on the command line.
+    // startParameter.projectProperties is readable during settings evaluation.
+    def loomVer = settings.startParameter.projectProperties.get('loomVer') ?: '1.14-SNAPSHOT'
+
     repositories {
         maven {
             name = 'Fabric'
@@ -7,4 +11,10 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+
+    plugins {
+        id 'net.fabricmc.fabric-loom' version "${loomVer}"
+    }
 }
+
+rootProject.name = 'YazanakiMod'

@@ -67,7 +67,7 @@ def versionTable = [
         yarn_mappings     : null,
         loader_version    : '0.18.0',
         fabric_version    : '0.140.2+26.1',
-        java_ver          : 25,
+        java_ver          : 21,
     ],
 ]
 
@@ -85,7 +85,13 @@ base {
     archivesName = project.archives_base_name
 }
 
-repositories {}
+repositories {
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    mavenCentral()
+}
 
 // ── Source sets ──────────────────────────────────────────────────────────────
 if (hasVersionSrc) {
@@ -122,20 +128,15 @@ processResources {
     inputs.property "version", project.version
     inputs.property "hasVersionSrc", hasVersionSrc.toString()
 
-    // Only expand ${version} in fabric.mod.json — no other placeholders
     filesMatching("fabric.mod.json") {
         expand "version": project.version
     }
 
-    // Pull in the version-specific resources (mixin JSON) when applicable
     if (hasVersionSrc) {
         from(sourceSets."${versionSrcName}".resources)
     }
 
-    // Write the correct fabric.mod.json and mixin JSON files via a doLast action
-    // so we can manipulate them as plain text without placeholder syntax in JSON
     doLast {
-        // ── fabric.mod.json: inject version-specific mixin config entry ────
         def fabricJson = new File("${buildDir}/resources/main/fabric.mod.json")
         if (fabricJson.exists()) {
             def text = fabricJson.text
@@ -148,13 +149,10 @@ processResources {
             fabricJson.text = text
         }
 
-        // ── yazanaki.mixins.json: inject or omit the attack/outline mixins ─
         def mixinJson = new File("${buildDir}/resources/main/yazanaki.mixins.json")
         if (mixinJson.exists()) {
             def text = mixinJson.text
             if (hasVersionSrc) {
-                // Version-specific build: remove attack/outline mixins from shared
-                // config (they live in the version-specific mixin config instead)
                 text = text.replace(',\n    "LivingEntityRendererMixin",\n    "PlayerEntityMixin"', '')
             }
             mixinJson.text = text

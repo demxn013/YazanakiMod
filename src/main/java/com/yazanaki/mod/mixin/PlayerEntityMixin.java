@@ -9,7 +9,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(value = ClientPlayerEntity.class, remap = false)
+/**
+ * Shared mixin for 1.21.4 through 1.21.9.
+ * Injects into attack (yarn name for these versions).
+ *
+ * 1.21.11 renames this to attackEntity — handled in the v1_21_11 source set.
+ * 26.1    uses Mojang mappings (LocalPlayer#attack) — handled in the v26_1 source set.
+ */
+@Mixin(ClientPlayerEntity.class)
 public class PlayerEntityMixin {
 
     @Inject(method = "attack", at = @At("HEAD"), cancellable = true)

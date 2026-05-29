@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * 1.21.11 variant — yarn renamed hasOutline → shouldRenderOutline in this version.
  */
-@Mixin(value = LivingEntityRenderer.class, remap = true)
+@Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
 
     @Inject(method = "shouldRenderOutline", at = @At("RETURN"), cancellable = true)

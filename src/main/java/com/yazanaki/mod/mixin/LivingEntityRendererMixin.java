@@ -11,7 +11,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(value = LivingEntityRenderer.class, remap = false)
+/**
+ * Shared mixin for 1.21.4 through 1.21.9.
+ * Injects into hasOutline (yarn name for these versions).
+ *
+ * 1.21.11 renames this to shouldRenderOutline — handled in the v1_21_11 source set.
+ * 26.1    uses Mojang mappings (shouldShowName) — handled in the v26_1 source set.
+ */
+@Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
 
     @Inject(method = "hasOutline", at = @At("RETURN"), cancellable = true)

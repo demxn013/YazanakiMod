@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * 1.21.11 variant — yarn renamed attack → attackEntity in this version.
  */
-@Mixin(value = ClientPlayerEntity.class, remap = true)
+@Mixin(ClientPlayerEntity.class)
 public class PlayerEntityMixin {
 
     @Inject(method = "attackEntity", at = @At("HEAD"), cancellable = true)

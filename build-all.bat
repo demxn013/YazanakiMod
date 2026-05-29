@@ -5,7 +5,7 @@ REM ============================================================
 REM Yazanaki Mod — Build Script
 REM
 REM Usage:
-REM   build-all.bat           — build all versions (1.21.11 + 26.1)
+REM   build-all.bat           — build all versions
 REM   build-all.bat 1.21.11  — build one specific version
 REM   build-all.bat 26.1     — build one specific version
 REM ============================================================
@@ -32,11 +32,6 @@ echo.
 echo ============================================================
 echo  Building Minecraft %MC%
 echo ============================================================
-
-if "%MC%"=="1.21.11" set LOOM=1.14-SNAPSHOT
-if "%MC%"=="26.1"    set LOOM=1.15-SNAPSHOT
-
-powershell -Command "(Get-Content gradle.properties) -replace '^loom_version=.*', 'loom_version=%LOOM%' | Set-Content gradle.properties"
 
 call gradlew build -Pmc=%MC% --no-daemon
 if errorlevel 1 (

@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * 26.1 variant — unobfuscated Mojang mappings.
- * Real class names differ from yarn (net.minecraft.client.player vs net.minecraft.client.network, etc.)
+ * Uses shouldShowName as the injection point (equivalent to hasOutline in this context).
  */
 @Mixin(value = LivingEntityRenderer.class, remap = false)
 public class LivingEntityRendererMixin {
@@ -26,8 +26,6 @@ public class LivingEntityRendererMixin {
         String username = player.getName().getString();
         if (!MemberRegistry.isMember(username)) return;
 
-        // GlowManager expects the yarn AbstractClientPlayerEntity type; adapt via cast
-        // In 26.1 AbstractClientPlayer IS the equivalent class — cast is safe at runtime
         GlowManager.tick26(player);
         cir.setReturnValue(true);
     }
