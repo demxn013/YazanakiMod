@@ -3,7 +3,7 @@
 // ============================================================
 
 plugins {
-    id 'net.fabricmc.fabric-loom' version '1.15.1'
+    id 'fabric-loom' version "${loom_version}"
     id 'maven-publish'
 }
 
@@ -26,8 +26,8 @@ dependencies {
     minecraft "com.mojang:minecraft:1.21.11"
     mappings "net.fabricmc:yarn:1.21.11+build.1:v2"
 
-    modImplementation "net.fabricmc:fabric-loader:0.16.14"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:0.140.2+1.21.11"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
 processResources {
