@@ -8,7 +8,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 /**
- * Ally protection logic — called from the PlayerEntityMixin before an attack lands.
+ * Ally protection logic — called from PlayerEntityMixin before an attack lands.
  *
  * Rules:
  * - If target is an empire member AND the attacking player is not holding SHIFT → cancel attack
@@ -16,6 +16,10 @@ import net.minecraft.util.Formatting;
  * - Shows a brief HUD message when a block is triggered
  *
  * This is purely client-side: it prevents the attack packet from being sent.
+ *
+ * shouldBlockAttack()   — used by 1.21.4 – 1.21.11 (yarn PlayerEntity)
+ * shouldBlockAttack26() — used by 26.1 (Mojang Player); accepts Object to keep
+ *                         this shared file free of 26.1-specific imports.
  */
 public class AllyProtection {
 
@@ -25,6 +29,9 @@ public class AllyProtection {
 
     /**
      * Called from the attack mixin before an attack is sent.
+     *
+     * Used by: 1.21.4 – 1.21.11 (yarn mappings)
+     *
      * @return true if the attack should be BLOCKED (cancelled)
      */
     public static boolean shouldBlockAttack(PlayerEntity target) {
@@ -39,9 +46,41 @@ public class AllyProtection {
         String targetName = target.getName().getString();
         if (!MemberRegistry.isMember(targetName)) return false;
 
-        // It's an unintentional attack on an ally — block it and notify
         showBlockedMessage(targetName);
         return true;
+    }
+
+    /**
+     * 26.1 overload — accepts Mojang's Player type as Object to avoid a
+     * compile-time dependency on 26.1-specific classes in the shared source set.
+     * The v26_1 mixin has already confirmed the target is a Player instance.
+     *
+     * Used by: 26.1 (Mojang/unobfuscated mappings)
+     *
+     * @return true if the attack should be BLOCKED (cancelled)
+     */
+    public static boolean shouldBlockAttack26(Object target) {
+        if (!YazanakiConfig.get().allyProtectionEnabled) return false;
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return false;
+
+        if (client.player.isSneaking()) return false;
+
+        try {
+            java.lang.reflect.Method getName = target.getClass().getMethod("getName");
+            Object component = getName.invoke(target);
+            java.lang.reflect.Method getString = component.getClass().getMethod("getString");
+            String targetName = (String) getString.invoke(component);
+
+            if (!MemberRegistry.isMember(targetName)) return false;
+
+            showBlockedMessage(targetName);
+            return true;
+        } catch (Exception e) {
+            // Fail open — don't block if we can't resolve the name
+            return false;
+        }
     }
 
     private static void showBlockedMessage(String targetName) {

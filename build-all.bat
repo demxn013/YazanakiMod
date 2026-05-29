@@ -2,11 +2,12 @@
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM Yazanaki Mod — Multi-Version Build Script
+REM Yazanaki Mod — Build Script
 REM
 REM Usage:
-REM   build-all.bat           — build all versions
-REM   build-all.bat 1.21.5   — build one specific version
+REM   build-all.bat           — build all versions (1.21.11 + 26.1)
+REM   build-all.bat 1.21.11  — build one specific version
+REM   build-all.bat 26.1     — build one specific version
 REM ============================================================
 
 if not "%1"=="" (
@@ -14,16 +15,6 @@ if not "%1"=="" (
     goto :done
 )
 
-call :build 1.21.4
-if errorlevel 1 goto :fail
-call :build 1.21.5
-if errorlevel 1 goto :fail
-call :build 1.21.6
-if errorlevel 1 goto :fail
-call :build 1.21.8
-if errorlevel 1 goto :fail
-call :build 1.21.9
-if errorlevel 1 goto :fail
 call :build 1.21.11
 if errorlevel 1 goto :fail
 call :build 26.1
@@ -42,11 +33,6 @@ echo ============================================================
 echo  Building Minecraft %MC%
 echo ============================================================
 
-if "%MC%"=="1.21.4"  set LOOM=1.11-SNAPSHOT
-if "%MC%"=="1.21.5"  set LOOM=1.11-SNAPSHOT
-if "%MC%"=="1.21.6"  set LOOM=1.11-SNAPSHOT
-if "%MC%"=="1.21.8"  set LOOM=1.11-SNAPSHOT
-if "%MC%"=="1.21.9"  set LOOM=1.11-SNAPSHOT
 if "%MC%"=="1.21.11" set LOOM=1.14-SNAPSHOT
 if "%MC%"=="26.1"    set LOOM=1.15-SNAPSHOT
 

@@ -7,13 +7,4 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
-
-    // Allow both old and new loom plugin IDs to resolve to the same artifact
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id == 'net.fabricmc.fabric-loom') {
-                useModule("net.fabricmc:fabric-loom:${requested.version}")
-            }
-        }
-    }
 }

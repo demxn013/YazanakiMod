@@ -8,7 +8,16 @@ plugins {
 }
 
 def targetMc = project.findProperty('mc') ?: '1.21.4'
-def isUnobfuscated = (targetMc == '26.1')
+
+def unobfuscatedVersions = ['26.1']
+def isUnobfuscated = unobfuscatedVersions.contains(targetMc)
+
+// Versions that need their own source set due to renamed/different methods
+def versionSourceSets = ['1.21.11', '26.1']
+def hasVersionSrc = versionSourceSets.contains(targetMc)
+
+def versionSrcName = 'v' + targetMc.replace('.', '_')
+def versionMixinConfig = hasVersionSrc ? "yazanaki.${versionSrcName}.mixins.json" : null
 
 def versionTable = [
     '1.21.4' : [
@@ -78,6 +87,22 @@ base {
 
 repositories {}
 
+// ── Source sets ──────────────────────────────────────────────────────────────
+if (hasVersionSrc) {
+    sourceSets {
+        "${versionSrcName}" {
+            java {
+                srcDirs = ["src/${versionSrcName}/java"]
+            }
+            resources {
+                srcDirs = ["src/${versionSrcName}/resources"]
+            }
+            compileClasspath += sourceSets.main.compileClasspath
+            runtimeClasspath += sourceSets.main.runtimeClasspath
+        }
+    }
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${cfg.minecraft_version}"
 
@@ -86,16 +111,54 @@ dependencies {
         modImplementation "net.fabricmc:fabric-loader:${cfg.loader_version}"
         modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.fabric_version}"
     } else {
-        // 26.1 is unobfuscated — no mappings, plain implementation
-        implementation "net.fabricmc:fabric-loader:${cfg.loader_version}"
-        implementation "net.fabricmc.fabric-api:fabric-api:${cfg.fabric_version}"
+        mappings loom.officialMojangMappings()
+        modImplementation "net.fabricmc:fabric-loader:${cfg.loader_version}"
+        modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.fabric_version}"
     }
 }
 
+// ── Resource processing ───────────────────────────────────────────────────────
 processResources {
     inputs.property "version", project.version
+    inputs.property "hasVersionSrc", hasVersionSrc.toString()
+
+    // Only expand ${version} in fabric.mod.json — no other placeholders
     filesMatching("fabric.mod.json") {
         expand "version": project.version
+    }
+
+    // Pull in the version-specific resources (mixin JSON) when applicable
+    if (hasVersionSrc) {
+        from(sourceSets."${versionSrcName}".resources)
+    }
+
+    // Write the correct fabric.mod.json and mixin JSON files via a doLast action
+    // so we can manipulate them as plain text without placeholder syntax in JSON
+    doLast {
+        // ── fabric.mod.json: inject version-specific mixin config entry ────
+        def fabricJson = new File("${buildDir}/resources/main/fabric.mod.json")
+        if (fabricJson.exists()) {
+            def text = fabricJson.text
+            if (versionMixinConfig) {
+                text = text.replace(
+                    '"yazanaki.mixins.json"',
+                    '"yazanaki.mixins.json",\n    "' + versionMixinConfig + '"'
+                )
+            }
+            fabricJson.text = text
+        }
+
+        // ── yazanaki.mixins.json: inject or omit the attack/outline mixins ─
+        def mixinJson = new File("${buildDir}/resources/main/yazanaki.mixins.json")
+        if (mixinJson.exists()) {
+            def text = mixinJson.text
+            if (hasVersionSrc) {
+                // Version-specific build: remove attack/outline mixins from shared
+                // config (they live in the version-specific mixin config instead)
+                text = text.replace(',\n    "LivingEntityRendererMixin",\n    "PlayerEntityMixin"', '')
+            }
+            mixinJson.text = text
+        }
     }
 }
 
@@ -109,8 +172,13 @@ java {
     targetCompatibility = JavaVersion.toVersion(cfg.java_ver)
 }
 
+// ── Jar assembly ──────────────────────────────────────────────────────────────
 jar {
     from("LICENSE") {
         rename { "${it}_${project.base.archivesName.get()}" }
+    }
+
+    if (hasVersionSrc) {
+        from sourceSets."${versionSrcName}".output
     }
 }
