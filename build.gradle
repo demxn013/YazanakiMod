@@ -2,23 +2,11 @@
 // Yazanaki Mod — Multi-Version Build
 // ============================================================
 
-buildscript {
-    repositories {
-        maven {
-            name = 'Fabric'
-            url = 'https://maven.fabricmc.net/'
-        }
-        mavenCentral()
-        gradlePluginPortal()
-    }
-    dependencies {
-        // loom_version comes from gradle.properties
-        classpath "net.fabricmc:fabric-loom:${loom_version}"
-    }
+plugins {
+    // Version is resolved from gradle.properties via settings.gradle resolutionStrategy
+    id 'net.fabricmc.fabric-loom'
+    id 'maven-publish'
 }
-
-apply plugin: 'fabric-loom'
-apply plugin: 'maven-publish'
 
 // ── Version selection ─────────────────────────────────────────────────────────
 def targetMc = project.findProperty('mc') ?: '1.21.4'
@@ -80,7 +68,7 @@ def versionTable = [
     '26.1'   : [
         minecraft_version : '26.1.2',
         yarn_mappings     : null,
-        loader_version    : '0.18.0',
+        loader_version    : '0.18.4',
         fabric_version    : '0.140.2+26.1',
         java_ver          : 21,
     ],
@@ -170,7 +158,6 @@ processResources {
     }
 
     doLast {
-        // layout.buildDirectory is the Gradle 9-compatible replacement for buildDir
         def buildDir = layout.buildDirectory.get().asFile
 
         def fabricJson = new File("${buildDir}/resources/main/fabric.mod.json")
@@ -191,7 +178,6 @@ processResources {
             // The mixin JSON structure is static so a JSON library isn't needed.
             def text = mixinJson.text
             overriddenMixins.each { name ->
-                // Matches the entry with optional surrounding whitespace and comma
                 text = text.replaceAll(/,?\s*"${java.util.regex.Pattern.quote(name)}"/, '')
             }
             mixinJson.text = text

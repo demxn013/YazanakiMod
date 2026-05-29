@@ -1,5 +1,12 @@
 pluginManagement {
+    // Load gradle.properties so we can read loom_version inside this block.
+    // pluginManagement{} must be first in the file, so we load props here.
+    def props = new Properties()
+    file("gradle.properties").withInputStream { props.load(it) }
+    def loomVersion = props.getProperty("loom_version")
+
     repositories {
+        // Fabric maven must come first so Gradle finds fabric-loom before the Plugin Portal
         maven {
             name = 'Fabric'
             url = 'https://maven.fabricmc.net/'
@@ -7,8 +14,14 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == 'net.fabricmc.fabric-loom') {
+                useVersion(loomVersion)
+            }
+        }
+    }
 }
 
-// Needed so Gradle can load the loom_version property for the buildscript block
-// before the project is fully configured
 rootProject.name = 'YazanakiMod'
