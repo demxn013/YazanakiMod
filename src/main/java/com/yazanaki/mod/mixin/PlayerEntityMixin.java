@@ -9,12 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Intercepts the client-side attack action before the packet is sent.
- * If AllyProtection determines this is an accidental ally hit, the attack
- * is cancelled entirely — no packet ever leaves the client.
- */
-@Mixin(ClientPlayerEntity.class)
+@Mixin(value = ClientPlayerEntity.class, remap = false)
 public class PlayerEntityMixin {
 
     @Inject(method = "attack", at = @At("HEAD"), cancellable = true)
@@ -22,7 +17,7 @@ public class PlayerEntityMixin {
         if (!(target instanceof PlayerEntity playerTarget)) return;
 
         if (AllyProtection.shouldBlockAttack(playerTarget)) {
-            ci.cancel(); // Prevent the attack packet from being sent
+            ci.cancel();
         }
     }
 }

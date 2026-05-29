@@ -3,6 +3,7 @@ package com.yazanaki.mod.features;
 import com.yazanaki.mod.config.YazanakiConfig;
 import com.yazanaki.mod.data.MemberData;
 import com.yazanaki.mod.data.MemberRegistry;
+import com.yazanaki.mod.mixin.CameraAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
@@ -13,18 +14,8 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 
-/**
- * Renders a small clan tag + rank line above each empire member's vanilla nametag.
- *
- * Called directly from GameRendererMixin after entity rendering, so it works on
- * all MC versions including 1.21.9+ where WorldRenderEvents.AFTER_ENTITIES was removed.
- */
 public class NametagRenderer {
 
-    /**
-     * Called from GameRendererMixin. Renders clan tags for all nearby empire members.
-     * matrixStack and camera are pulled fresh from the mixin injection point.
-     */
     public static void renderAll(MatrixStack matrices, Camera camera) {
         if (!YazanakiConfig.get().nametagEnabled) return;
 
@@ -33,7 +24,7 @@ public class NametagRenderer {
         if (client.options.hudHidden) return;
 
         VertexConsumerProvider.Immediate immediate = client.getBufferBuilders().getEntityVertexConsumers();
-        Vec3d camPos = camera.getPos();
+        Vec3d camPos = ((CameraAccessor) camera).yazanaki_getPos();
 
         for (AbstractClientPlayerEntity player : client.world.getPlayers()) {
             if (player == client.player) continue;

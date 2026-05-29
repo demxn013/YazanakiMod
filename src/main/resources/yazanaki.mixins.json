@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
+    "CameraAccessor",
     "GameRendererMixin",
     "LivingEntityRendererMixin",
     "PlayerEntityMixin"
