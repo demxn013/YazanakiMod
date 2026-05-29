@@ -9,4 +9,6 @@ pluginManagement {
     }
 }
 
+// Needed so Gradle can load the loom_version property for the buildscript block
+// before the project is fully configured
 rootProject.name = 'YazanakiMod'

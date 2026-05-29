@@ -12,15 +12,15 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath "net.fabricmc:fabric-loom:${project.findProperty('loom_version') ?: '1.8.4'}"
+        // loom_version comes from gradle.properties
+        classpath "net.fabricmc:fabric-loom:${loom_version}"
     }
 }
 
-plugins {
-    id 'fabric-loom' version "${loom_version}"
-    id 'maven-publish'
-}
+apply plugin: 'fabric-loom'
+apply plugin: 'maven-publish'
 
+// ── Version selection ─────────────────────────────────────────────────────────
 def targetMc = project.findProperty('mc') ?: '1.21.4'
 
 def unobfuscatedVersions = ['26.1']
@@ -108,11 +108,12 @@ repositories {
     mavenCentral()
 }
 
-// ── Source sets ──────────────────────────────────────────────────────────────
+// ── Source sets ───────────────────────────────────────────────────────────────
 sourceSets {
     main {
         java {
             if (hasVersionSrc) {
+                // Exclude the mixins that are overridden by the version-specific source set
                 exclude overriddenMixins.collect { "com/yazanaki/mod/mixin/${it}.java" }
             }
         }
@@ -128,23 +129,30 @@ if (hasVersionSrc) {
             resources {
                 srcDirs = ["src/${versionSrcName}/resources"]
             }
-            compileClasspath += sourceSets.main.compileClasspath
+            // Wire the full compile classpath including Loom's remapped Minecraft jars
+            compileClasspath += sourceSets.main.compileClasspath + configurations.minecraft
             runtimeClasspath += sourceSets.main.runtimeClasspath
         }
     }
 }
 
+// ── Dependencies ──────────────────────────────────────────────────────────────
 dependencies {
     minecraft "com.mojang:minecraft:${cfg.minecraft_version}"
 
     if (!isUnobfuscated) {
         mappings "net.fabricmc:yarn:${cfg.yarn_mappings}:v2"
-        modImplementation "net.fabricmc:fabric-loader:${cfg.loader_version}"
-        modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.fabric_version}"
     } else {
         mappings loom.officialMojangMappings()
-        modImplementation "net.fabricmc:fabric-loader:${cfg.loader_version}"
-        modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.fabric_version}"
+    }
+
+    modImplementation "net.fabricmc:fabric-loader:${cfg.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.fabric_version}"
+
+    // Make version-specific source set output available at compile time in main
+    // (not needed for runtime — it's merged into the jar)
+    if (hasVersionSrc) {
+        implementation sourceSets."${versionSrcName}".output
     }
 }
 
@@ -162,6 +170,9 @@ processResources {
     }
 
     doLast {
+        // layout.buildDirectory is the Gradle 9-compatible replacement for buildDir
+        def buildDir = layout.buildDirectory.get().asFile
+
         def fabricJson = new File("${buildDir}/resources/main/fabric.mod.json")
         if (fabricJson.exists()) {
             def text = fabricJson.text
@@ -176,18 +187,19 @@ processResources {
 
         def mixinJson = new File("${buildDir}/resources/main/yazanaki.mixins.json")
         if (mixinJson.exists() && hasVersionSrc) {
-            def slurper = new groovy.json.JsonSlurper()
-            def mixin = slurper.parseText(mixinJson.text)
-            mixin.client = (mixin.client as List).findAll { entry ->
-                !overriddenMixins.contains(entry)
+            // Remove overridden mixin entries from the client array using plain string ops.
+            // The mixin JSON structure is static so a JSON library isn't needed.
+            def text = mixinJson.text
+            overriddenMixins.each { name ->
+                // Matches the entry with optional surrounding whitespace and comma
+                text = text.replaceAll(/,?\s*"${java.util.regex.Pattern.quote(name)}"/, '')
             }
-            mixinJson.text = groovy.json.JsonOutput.prettyPrint(
-                groovy.json.JsonOutput.toJson(mixin)
-            )
+            mixinJson.text = text
         }
     }
 }
 
+// ── Compile options ───────────────────────────────────────────────────────────
 tasks.withType(JavaCompile).configureEach {
     it.options.release = cfg.java_ver
 }
@@ -198,6 +210,7 @@ java {
     targetCompatibility = JavaVersion.toVersion(cfg.java_ver)
 }
 
+// ── Jar assembly ──────────────────────────────────────────────────────────────
 jar {
     from("LICENSE") {
         rename { "${it}_${project.base.archivesName.get()}" }
